@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 
 const equipmentController =
-  require('../controllers/equipmentController');
+  require('../Controller/equipmentController');
 
 // GET all equipment
 router.get('/', equipmentController.getAllEquipment);

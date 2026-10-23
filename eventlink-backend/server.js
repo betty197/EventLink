@@ -9,6 +9,10 @@ const db = require("./config/db");
 // Import API routes
 const equipmentRoute = require("./routes/equipmentRoute");
 const categoryRoute = require("./routes/categoryRoute");
+const authRoute = require("./routes/authRoute");
+
+// Import JWT authentication middleware
+const authenticateToken = require("./middleware/authMiddleware");
 
 // Create Express application
 const app = express();
@@ -22,11 +26,11 @@ app.use(express.json());
 
 // ================================
 // HOME ROUTE
-// Check whether the API is running
 // ================================
 
 app.get("/", (req, res) => {
   res.status(200).json({
+    success: true,
     message: "Welcome to EventLink API",
     status: "running",
   });
@@ -43,6 +47,7 @@ app.get("/api/db-test", async (req, res) => {
     );
 
     res.status(200).json({
+      success: true,
       message: "Database connected successfully!",
       database: rows[0].databaseName,
     });
@@ -50,26 +55,42 @@ app.get("/api/db-test", async (req, res) => {
     console.error("Database connection error:", error.message);
 
     res.status(500).json({
+      success: false,
       message: "Database connection failed",
     });
   }
 });
 
 // ================================
-// EQUIPMENT API ROUTES
+// API ROUTES
 // ================================
 
+// Equipment routes
 app.use("/api/equipment", equipmentRoute);
 
-// ================================
-// CATEGORY API ROUTES
-// ================================
-
+// Categories routes
 app.use("/api/categories", categoryRoute);
 
+// Registration and login routes
+app.use("/api/auth", authRoute);
+
 // ================================
-// HANDLE UNKNOWN ROUTES
-// Keep this after all API routes
+// PROTECTED USER PROFILE ROUTE
+// ================================
+
+// GET /api/auth/me
+// Requires a valid JWT token
+app.get("/api/auth/me", authenticateToken, (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Authentication successful!",
+    user: req.user,
+  });
+});
+
+// ================================
+// UNKNOWN ROUTE HANDLER
+// Keep this after all routes
 // ================================
 
 app.use((req, res) => {
@@ -80,11 +101,15 @@ app.use((req, res) => {
 });
 
 // ================================
-// GENERAL ERROR-HANDLING MIDDLEWARE
+// GLOBAL ERROR HANDLER
 // ================================
 
 app.use((err, req, res, next) => {
   console.error("Server error:", err.message);
+
+  if (res.headersSent) {
+    return next(err);
+  }
 
   res.status(500).json({
     success: false,
@@ -93,7 +118,7 @@ app.use((err, req, res, next) => {
 });
 
 // ================================
-// START THE SERVER
+// START SERVER
 // ================================
 
 const PORT = process.env.PORT || 3001;
